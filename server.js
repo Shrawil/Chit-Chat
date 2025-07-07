@@ -39,16 +39,32 @@ app.use(express.static('public'));
 io.on('connection', (socket) => {
   console.log('A user connected');
 
-  socket.on('chat message', (msg) => {
-    io.emit('chat message', msg);
+  // Store username sent from client
+  socket.on('login', (username) => {
+    socket.username = username;
+    users.add(username);
+    io.emit('user list', Array.from(users));
+    io.emit('chat message', {
+      user: 'Server',
+      text: `${username} has joined the chat.`,
+      time: new Date().toLocaleTimeString()
+    });
   });
 
   socket.on('disconnect', () => {
+    if (socket.username) {
+      users.delete(socket.username);
+      io.emit('user list', Array.from(users));
+      io.emit('chat message', {
+        user: 'Server',
+        text: `${socket.username} has left the chat.`,
+        time: new Date().toLocaleTimeString()
+      });
+    }
     console.log('A user disconnected');
   });
-});
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  socket.on('chat message', (msg) => {
+    io.emit('chat message', msg);
+  });
 });
