@@ -1,25 +1,49 @@
-const socket = io();
+let socket;
+let currentUser = "";
 
-const form = document.getElementById('form');
-const input = document.getElementById('input');
-const messages = document.getElementById('messages');
-const usernameInput = document.getElementById('username');
+async function login() {
+  const username = document.getElementById("login-username").value;
+  const password = document.getElementById("login-password").value;
 
-form.addEventListener('submit', (e) => {
-  e.preventDefault();
-  const username = usernameInput.value || "Anonymous";
-  if (input.value.trim()) {
-    socket.emit('chat message', {
-      user: username,
-      text: input.value
-    });
-    input.value = '';
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password })
+  });
+
+  if (res.ok) {
+    document.getElementById("login").style.display = "none";
+    document.getElementById("chat").style.display = "flex";
+    currentUser = username;
+    initChat();
+  } else {
+    alert("Invalid username or password");
   }
-});
+}
 
-socket.on('chat message', (msg) => {
-  const item = document.createElement('li');
-  item.textContent = `${msg.user}: ${msg.text}`;
-  messages.appendChild(item);
-  messages.scrollTop = messages.scrollHeight;
-});
+function initChat() {
+  socket = io();
+
+  const form = document.getElementById("form");
+  const input = document.getElementById("input");
+  const messages = document.getElementById("messages");
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (input.value.trim()) {
+      socket.emit("chat message", {
+        user: currentUser,
+        text: input.value,
+        time: new Date().toLocaleTimeString()
+      });
+      input.value = "";
+    }
+  });
+
+  socket.on("chat message", (msg) => {
+    const item = document.createElement("li");
+    item.textContent = `${msg.user}: ${msg.text} [${msg.time}]`;
+    messages.appendChild(item);
+    messages.scrollTop = messages.scrollHeight;
+  });
+}
