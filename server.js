@@ -1,15 +1,3 @@
-const allowedUsers = {
-  "Shrawil": "shrawilsri8381",
-  "Akriti": "akritithedon",
-  "Tiya": "tiyaistia",
-  "Amardeep Singh": "baapji",
-  "Seema Srivastava": "seema102",
-  "Indra": "sigmaindra",
-  "Diva": "1210diva",
-  "Adarsh": "5footdon",
-  "Raj": "dacsahab",
-};
-
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
@@ -19,30 +7,25 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+const users = new Set(); // Track online usernames
+
 // Middleware
 app.use(bodyParser.json());
-
-// Login route
-app.post("/login", (req, res) => {
-  const { username, password } = req.body;
-  if (allowedUsers[username] === password) {
-    res.json({ success: true });
-  } else {
-    res.status(401).json({ success: false, message: "Invalid credentials" });
-  }
-});
-
-// Serve public folder
-app.use(express.static('public'));
+app.use(express.static('public')); // Serve static files
 
 // Socket.io logic
 io.on('connection', (socket) => {
   console.log('A user connected');
 
-  // Store username sent from client
   socket.on('login', (username) => {
+    if (users.has(username)) {
+      socket.emit('login error', 'Username already taken');
+      return;
+    }
+
     socket.username = username;
     users.add(username);
+
     io.emit('user list', Array.from(users));
     io.emit('chat message', {
       user: 'Server',
@@ -67,4 +50,8 @@ io.on('connection', (socket) => {
   socket.on('chat message', (msg) => {
     io.emit('chat message', msg);
   });
+});
+
+server.listen(3000, () => {
+  console.log('Server listening on http://localhost:3000');
 });
